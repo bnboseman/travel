@@ -5,6 +5,7 @@ timeInStates.NY = 0;
 timeInStates.PA = 0;
 timeInStates.Moms = 0;
 timeInStates.Easton = 0;
+var totalDistance = 0;
 
 // Function to determine sleep locations
 function determineSleepLocations(data) {
@@ -21,6 +22,9 @@ function determineSleepLocations(data) {
   });
 
   for (const item of data.timelineObjects) {
+    if (item.activitySegment && !isNaN(item.activitySegment.distance) && new Date(item.activitySegment.duration.startTimestamp) > new Date("2021-09-17 00:00:00")) {
+      totalDistance += parseFloat(item.activitySegment.distance);
+    }
     if (item.placeVisit && new Date(item.placeVisit.duration.startTimestamp) > new Date("2021-09-17 00:00:00")) {
       var time = Math.abs(new Date(item.placeVisit.duration.endTimestamp) - new Date(item.placeVisit.duration.startTimestamp)) / 36e5;
       sleepLocations.push({
@@ -94,5 +98,6 @@ const allSleepLocationsJSON = JSON.stringify(allSleepLocations, null, 2);
 fs.writeFileSync(outputPath, allSleepLocationsJSON, 'utf-8');
 
 console.log(timeInStates);
-
+console.log("Total meters traveled: " + totalDistance);
+console.log("Total miles traveled: " + totalDistance*0.000621371);
 
