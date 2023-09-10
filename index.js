@@ -7,6 +7,31 @@ timeInStates.Moms = 0;
 timeInStates.Easton = 0;
 var totalDistance = 0;
 
+function determineMidnightLocations(data, currentDate) {
+  const midnightLocations = {};
+
+  for (const item of data.timelineObjects) {
+    if (item.placeVisit) {
+      const startTimestamp = new Date(item.placeVisit.duration.startTimestamp);
+      const endTimestamp = new Date(item.placeVisit.duration.endTimestamp);
+
+      // Check if the event occurred at midnight
+      if (startTimestamp > currentDate  && endTimestamp > currentDate.getDate() + 1) {
+      const dateKey = startTimestamp.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        // Store the location for that day
+        if (item.placeVisit.location) {
+          if (!midnightLocations[dateKey]) {
+            midnightLocations[dateKey] = [];
+          }
+          midnightLocations[dateKey].push(item.placeVisit.location.address);
+        }
+      }
+    }
+  }
+
+  return midnightLocations;
+}
 // Function to determine sleep locations
 function determineSleepLocations(data) {
   const sleepLocations = [];
@@ -78,6 +103,62 @@ function processYear(year) {
   return sleepLocations;
 }
 
+function processMidnightYear(year) {
+  const midnightLocationsForYear = {
+    JANUARY:[],
+    FEBRUARY: [],
+    MARCH: [],
+    APRIL: [],
+    MAY: [],
+    JUNE: [],
+    JULY: [],
+    AUGUST:[],
+    SEPTEMBER: [],
+    OCTOBER: [],
+    NOVEMBER: [],
+    DECEMBER: [],
+  }
+
+  const startDate = new Date(year, 0, 1, 0, 0, 0); // September is 8 in JavaScript's Date
+  const endDate = new Date(year, 11, 31, 11, 59, 59); // End on September 16 of the next year
+
+  const currentDate = new Date(startDate);
+
+  const filePaths = {};
+  for (let month = 1; month <= 12; month++) {
+    const monthName = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' }).toUpperCase();
+    const filePath = path.join(year.toString(), `${year}_${monthName}.json`);
+    filePaths[monthName] = filePath;
+  }
+
+  var loadedMonth = null;
+  var filePath = null;
+  while (currentDate <= endDate) {
+    const yearMonthDay = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    if (loadedMonth != currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase() )
+    {
+      loadedMonth = currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase();
+      filePath = filePaths[loadedMonth];
+    }
+
+    if (fs.existsSync(filePath)) {
+      const data = readDataFromFile(filePath);
+      const locations = determineMidnightLocations(data, currentDate);
+
+      // Store locations for the current date
+      try {
+        midnightLocationsForYear[loadedMonth].push(locations);
+      } catch {
+      }
+    }
+
+    // Move to the next day
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return midnightLocationsForYear;
+}
+
 // Loop through years from 2021 to 2023
 const yearsToProcess = [2021, 2022, 2023];
 const allSleepLocations = [];
@@ -96,8 +177,22 @@ const allSleepLocationsJSON = JSON.stringify(allSleepLocations, null, 2);
 
 // Write the JSON string to the output file
 fs.writeFileSync(outputPath, allSleepLocationsJSON, 'utf-8');
+const midnightLocationsForYears = {};
+
+for (const year of [2021,2022, 2023]) {
+  const midnightLocationsForYear = processMidnightYear(year);
+  midnightLocationsForYears[year] = midnightLocationsForYear;
+}
+
 
 console.log(timeInStates);
 console.log("Total meters traveled: " + totalDistance);
 console.log("Total miles traveled: " + totalDistance*0.000621371);
+console.log(midnightLocationsForYears);
+fs.writeFileSync("2023.json", JSON.stringify(midnightLocationsForYears[2023],null, 2), 'utf-8');
+
+fs.writeFileSync("2022.json", JSON.stringify(midnightLocationsForYears[2022],null, 2), 'utf-8');
+
+fs.writeFileSync("2021.json", JSON.stringify(midnightLocationsForYears[2021],null, 2), 'utf-8');
+
 
