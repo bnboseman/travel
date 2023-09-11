@@ -18,6 +18,7 @@ function determineMidnightLocations(data, currentDate) {
       // Check if the event occurred at midnight
       if (startTimestamp > currentDate  && endTimestamp > currentDate.getDate() + 1) {
       const dateKey = startTimestamp.toISOString().split('T')[0]; // YYYY-MM-DD
+        console.lo
 
         // Store the location for that day
         if (item.placeVisit.location) {
@@ -141,7 +142,7 @@ function processMidnightYear(year) {
       filePath = filePaths[loadedMonth];
     }
 
-    if (fs.existsSync(filePath)) {
+    if (fs.existsSync(filePath) && currentDate.getDate() === 1) {
       const data = readDataFromFile(filePath);
       const locations = determineMidnightLocations(data, currentDate);
 
