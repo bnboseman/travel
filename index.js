@@ -7,19 +7,14 @@ timeInStates.Moms = 0;
 timeInStates.Easton = 0;
 var totalDistance = 0;
 
-function determineMidnightLocations(data, currentDate) {
+function determineLocationByDate(data) {
   const midnightLocations = {};
 
   for (const item of data.timelineObjects) {
     if (item.placeVisit) {
       const startTimestamp = new Date(item.placeVisit.duration.startTimestamp);
-      const endTimestamp = new Date(item.placeVisit.duration.endTimestamp);
 
-      // Check if the event occurred at midnight
-      if (startTimestamp > currentDate  && endTimestamp > currentDate.getDate() + 1) {
       const dateKey = startTimestamp.toISOString().split('T')[0]; // YYYY-MM-DD
-        console.lo
-
         // Store the location for that day
         if (item.placeVisit.location) {
           if (!midnightLocations[dateKey]) {
@@ -27,7 +22,6 @@ function determineMidnightLocations(data, currentDate) {
           }
           midnightLocations[dateKey].push(item.placeVisit.location.address);
         }
-      }
     }
   }
 
@@ -75,7 +69,6 @@ function determineSleepLocations(data) {
 
       }
     }
-
   }
   return sleepLocations;
 }
@@ -132,29 +125,22 @@ function processMidnightYear(year) {
     filePaths[monthName] = filePath;
   }
 
-  var loadedMonth = null;
-  var filePath = null;
-  while (currentDate <= endDate) {
-    const yearMonthDay = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    if (loadedMonth != currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase() )
-    {
-      loadedMonth = currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase();
-      filePath = filePaths[loadedMonth];
-    }
 
-    if (fs.existsSync(filePath) && currentDate.getDate() === 1) {
+  var loadedMonth = "";
+  var filePath = null;
+
+  for (let key in filePaths) {
+    filePath = filePaths[key];
+    if (fs.existsSync(filePath)) {
       const data = readDataFromFile(filePath);
-      const locations = determineMidnightLocations(data, currentDate);
+      const locations = determineLocationByDate(data);
 
       // Store locations for the current date
       try {
-        midnightLocationsForYear[loadedMonth].push(locations);
+        midnightLocationsForYear[key].push(locations);
       } catch {
       }
     }
-
-    // Move to the next day
-    currentDate.setDate(currentDate.getDate() + 1);
   }
 
   return midnightLocationsForYear;
