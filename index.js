@@ -7,7 +7,7 @@ timeInStates.Moms = 0;
 timeInStates.Easton = 0;
 var totalDistance = 0;
 
-function determineLocationByDate(data) {
+function determineLocationAddresses(data) {
   const midnightLocations = {};
 
   for (const item of data.timelineObjects) {
@@ -22,6 +22,27 @@ function determineLocationByDate(data) {
           }
           midnightLocations[dateKey].push(item.placeVisit.location.address);
         }
+    } else if (item.activitySegment) {
+      const startTime = new Date(item.activitySegment.duration.startTimestamp);
+      const endTime = new Date(item.activitySegment.duration.endTimestamp);
+      const dateKey = startTime.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      if (!midnightLocations[dateKey]) {
+        midnightLocations[dateKey] = [];
+      }
+
+      const duration = endTime - startTime;
+      var message = "Travelling from "
+          + startTime.toLocaleTimeString()
+          + " to "
+          + endTime.toLocaleTimeString()
+          + " for ";
+      if ((duration / 1000 / 60 / 60) < 1) {
+        message += Math.round(duration / 1000 / 60) + " minutes";
+      } else {
+        message += (duration / 1000 / 60 / 60).toFixed(2) + " hours";
+      }
+      midnightLocations[dateKey].push(message);
     }
   }
 
@@ -113,11 +134,6 @@ function processMidnightYear(year) {
     DECEMBER: [],
   }
 
-  const startDate = new Date(year, 0, 1, 0, 0, 0); // September is 8 in JavaScript's Date
-  const endDate = new Date(year, 11, 31, 11, 59, 59); // End on September 16 of the next year
-
-  const currentDate = new Date(startDate);
-
   const filePaths = {};
   for (let month = 1; month <= 12; month++) {
     const monthName = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' }).toUpperCase();
@@ -125,21 +141,13 @@ function processMidnightYear(year) {
     filePaths[monthName] = filePath;
   }
 
-
-  var loadedMonth = "";
-  var filePath = null;
-
   for (let key in filePaths) {
-    filePath = filePaths[key];
-    if (fs.existsSync(filePath)) {
-      const data = readDataFromFile(filePath);
-      const locations = determineLocationByDate(data);
+    if (fs.existsSync(filePaths[key])) {
+      const data = readDataFromFile(filePaths[key]);
+      const locations = determineLocationAddresses(data);
 
       // Store locations for the current date
-      try {
-        midnightLocationsForYear[key].push(locations);
-      } catch {
-      }
+      midnightLocationsForYear[key].push(locations);
     }
   }
 
