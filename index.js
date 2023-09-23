@@ -3,8 +3,16 @@ const path = require('path');
 const timeInStates = new Object();
 timeInStates.NY = 0;
 timeInStates.PA = 0;
+timeInStates.NYSummer = 0;
+timeInStates.PASummer = 0;
+timeInStates.NYRestofYear = 0;
+timeInStates.PARestofYear = 0;
+timeInStates.NYRestofYearWeekday = 0;
+timeInStates.PARestofYearWeekday = 0;
 timeInStates.Moms = 0;
 timeInStates.Easton = 0;
+
+const daysInNYDuringWeek = [];
 var totalDistance = 0;
 
 function determineLocationAddresses(data) {
@@ -32,11 +40,18 @@ function determineLocationAddresses(data) {
       }
 
       const duration = endTime - startTime;
-      var message = "Travelling from "
-          + startTime.toLocaleTimeString()
-          + " to "
-          + endTime.toLocaleTimeString()
-          + " for ";
+      var message = "";
+      if (item.activitySegment.activities[0].activityType == 'IN_PASSENGER_VEHICLE') {
+        message += "Driving from ";
+      } else {
+        message += "Travelling from ";
+      }
+
+      message += startTime.toLocaleTimeString()
+        + " to "
+        + endTime.toLocaleTimeString()
+        + " for ";
+
       if ((duration / 1000 / 60 / 60) < 1) {
         message += Math.round(duration / 1000 / 60) + " minutes";
       } else {
@@ -74,13 +89,40 @@ function determineSleepLocations(data) {
         time: Math.abs(new Date(item.placeVisit.duration.endTimestamp) - new Date(item.placeVisit.duration.startTimestamp)) / 36e5
       });
       if (item.placeVisit.location.address) {
+        const endTimestamp = new Date(item.placeVisit.duration.endTimestamp);
+        const isSummer =  (endTimestamp.getMonth() >= 5 && endTimestamp.getMonth() <= 7);
+        const dayOfWeek = endTimestamp.getDay(); // 0 for Sunday, 1 for Monday, ..., 6 for Saturday
+        const isWeekdayOrWeekend = dayOfWeek >= 1 && dayOfWeek <= 5;
+
+
         if (item.placeVisit.location.address.includes(', NY')) {
           timeInStates.NY += time;
+          const formattedDate = endTimestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+          if (!daysInNYDuringWeek.includes(formattedDate)) {
+            daysInNYDuringWeek.push(formattedDate);
+          }
+          if (isSummer) {
+            timeInStates.NYSummer += time;
+          } else {
+            timeInStates.NYRestofYear += time;
+            if (isWeekdayOrWeekend) {
+              timeInStates.NYRestofYearWeekday += time;
+            }
+          }
         } else if (item.placeVisit.location.address.includes(', PA')) {
           timeInStates.PA += time;
+          if (isSummer) {
+            timeInStates.PASummer += time;
+          } else {
+            timeInStates.PARestofYear += time;
+            if (isWeekdayOrWeekend) {
+              timeInStates.PARestofYearWeekday += time;
+            }
+          }
         } else if (item.placeVisit.location.address.includes(', NJ')) {
           timeInStates.NY += time;
         }
+
 
         if (item.placeVisit.location.address.includes('156th') || item.placeVisit.location.address.includes('Frederick') || item.placeVisit.location.address.includes('Herkimer')) {
           timeInStates.Moms += time;
@@ -183,7 +225,8 @@ for (const year of [2021,2022, 2023]) {
 console.log(timeInStates);
 console.log("Total meters traveled: " + totalDistance);
 console.log("Total miles traveled: " + totalDistance*0.000621371);
-console.log(midnightLocationsForYears);
+console.log(daysInNYDuringWeek);
+fs.writeFileSync("daysInNY.json", JSON.stringify(daysInNYDuringWeek,null, 2), 'utf-8');
 fs.writeFileSync("2023.json", JSON.stringify(midnightLocationsForYears[2023],null, 2), 'utf-8');
 
 fs.writeFileSync("2022.json", JSON.stringify(midnightLocationsForYears[2022],null, 2), 'utf-8');
