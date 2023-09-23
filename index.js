@@ -13,6 +13,7 @@ timeInStates.Moms = 0;
 timeInStates.Easton = 0;
 
 const daysInNYDuringWeek = [];
+const daysInPA = [];
 var totalDistance = 0;
 
 function determineLocationAddresses(data) {
@@ -111,6 +112,11 @@ function determineSleepLocations(data) {
           }
         } else if (item.placeVisit.location.address.includes(', PA')) {
           timeInStates.PA += time;
+
+          const formattedDate = endTimestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+          if (!daysInPA.includes(formattedDate)) {
+            daysInPA.push(formattedDate);
+          }
           if (isSummer) {
             timeInStates.PASummer += time;
           } else {
@@ -227,6 +233,8 @@ console.log("Total meters traveled: " + totalDistance);
 console.log("Total miles traveled: " + totalDistance*0.000621371);
 console.log(daysInNYDuringWeek);
 fs.writeFileSync("daysInNY.json", JSON.stringify(daysInNYDuringWeek,null, 2), 'utf-8');
+
+fs.writeFileSync("daysInPA.json", JSON.stringify(daysInPA,null, 2), 'utf-8');
 fs.writeFileSync("2023.json", JSON.stringify(midnightLocationsForYears[2023],null, 2), 'utf-8');
 
 fs.writeFileSync("2022.json", JSON.stringify(midnightLocationsForYears[2022],null, 2), 'utf-8');
